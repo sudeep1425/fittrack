@@ -1,7 +1,16 @@
 import axios from 'axios';
 
+// Extract and safely parse the base URL
+const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+let formattedUrl = rawUrl;
+
+// Remove trailing slash if present
+if (formattedUrl.endsWith('/')) formattedUrl = formattedUrl.slice(0, -1);
+// Remove /api so we can standardize it cleanly below
+if (formattedUrl.endsWith('/api')) formattedUrl = formattedUrl.slice(0, -4);
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: `${formattedUrl}/api`,
 });
 
 api.interceptors.request.use((config) => {
