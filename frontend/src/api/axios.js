@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Extract and safely parse the base URL
-const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const rawUrl = import.meta.env.VITE_API_URL;
 let formattedUrl = rawUrl;
 
 // Remove trailing slash if present
