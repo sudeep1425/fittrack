@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useEffect, useState, useCallback } from 'react';
+import { useAuth } from '../context/useAuth';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
@@ -247,9 +247,9 @@ const DEFAULT_WATER = 3000;
 
 export default function DashboardPage() {
   const { user, updateUser } = useAuth();
-  const [data, setData]           = useState({ diets: [], totalWater: 0, totalCalories: 0 });
+  const [data, setData] = useState({ diets: [], totalWater: 0, totalCalories: 0 });
   const [loadingData, setLoadingData] = useState(true);
-  const [profile, setProfile]     = useState(null);
+  const [profile, setProfile] = useState(null);
 
   const [calorieGoal, setCalorieGoal] = useState(user?.calorieGoal || DEFAULT_CAL);
   const [waterGoal,   setWaterGoal]   = useState(user?.waterGoal   || DEFAULT_WATER);
@@ -260,51 +260,91 @@ export default function DashboardPage() {
   const [addingFood,  setAddingFood]  = useState(false);
   const [addingWater, setAddingWater] = useState(false);
 
-  // Load dashboard data
-  const fetchData = async () => {
+  // Load dashboard data - FIXED
+  const fetchData = useCallback(async () => {
     try {
       setLoadingData(true);
-      const res = await api.get(`/dashboard/${user._id}`);
-      setData(res.data);
-    } catch {
+      // Get today's date
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Fetch today's diet logs
+      const dietRes = await api.get(`/diet?date=${today}`);
+      const diets = dietRes.data || [];
+      
+      // Fetch today's water intake
+      const waterRes = await api.get('/water');
+      const totalWater = waterRes.data?.totalWater || 0;
+      
+      // Calculate total calories
+      const totalCalories = diets.reduce((sum, d) => sum + (d.calories || 0), 0);
+      
+      setData({ 
+        diets: diets, 
+        totalWater: totalWater, 
+        totalCalories: totalCalories 
+      });
+    } catch (err) {
+      console.error('Fetch error:', err);
       toast.error('Failed to load dashboard');
+      // Set empty data on error
+      setData({ diets: [], totalWater: 0, totalCalories: 0 });
     } finally {
       setLoadingData(false);
     }
-  };
+  }, []);
 
   // Load profile for suggestions
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const res = await api.get(`/user/${user._id}`);
       setProfile(res.data);
       if (res.data.calorieGoal) setCalorieGoal(res.data.calorieGoal);
       if (res.data.waterGoal)   setWaterGoal(res.data.waterGoal);
-    } catch { /* silent */ }
-  };
+    } catch (err) { 
+      console.error('Profile fetch error:', err);
+      /* silent fail - profile is optional */
+    }
+  }, [user._id]);
 
-  useEffect(() => { fetchData(); fetchProfile(); }, []);
+  useEffect(() => {
+    if (user?._id) {
+      fetchData();
+      fetchProfile();
+    }
+  }, [user?._id, fetchData, fetchProfile]);
 
   const estimation = getEstimatedCalories(foodForm.food_name, foodForm.amount_grams);
   const estimatedCalories = estimation.cal;
 
+  // Handle add food - FIXED
   const handleAddFood = async (e) => {
     e.preventDefault();
-    if (!foodForm.food_name || !foodForm.amount_grams) return toast.error('Food name and amount are required');
+    if (!foodForm.food_name || !foodForm.amount_grams) {
+      return toast.error('Food name and amount are required');
+    }
     if (!estimatedCalories) {
       return toast.error('Could not auto-calculate calories. Please use a recognizable food name (e.g. rice, chicken, apple).');
     }
     setAddingFood(true);
     try {
-      await api.post('/diet', { ...foodForm, amount_grams: Number(foodForm.amount_grams), calories: estimatedCalories });
+      await api.post('/diet', { 
+        food_name: foodForm.food_name,
+        amount_grams: Number(foodForm.amount_grams),
+        calories: estimatedCalories,
+        meal_type: foodForm.meal_type
+      });
       toast.success('Food logged!');
       setFoodForm({ food_name: '', amount_grams: '', meal_type: 'Breakfast' });
-      fetchData();
+      fetchData(); // Refresh data
     } catch (err) {
+      console.error('Add food error:', err);
       toast.error(err.response?.data?.error || 'Failed to log food');
-    } finally { setAddingFood(false); }
+    } finally { 
+      setAddingFood(false); 
+    }
   };
 
+  // Handle add water - FIXED
   const handleAddWater = async (e) => {
     e.preventDefault();
     if (!waterForm.amount) return toast.error('Amount is required');
@@ -313,21 +353,26 @@ export default function DashboardPage() {
       await api.post('/water', { amount: Number(waterForm.amount) });
       toast.success('Water logged!');
       setWaterForm({ amount: '' });
-      fetchData();
+      fetchData(); // Refresh data
     } catch (err) {
+      console.error('Add water error:', err);
       toast.error(err.response?.data?.error || 'Failed to log water');
-    } finally { setAddingWater(false); }
+    } finally { 
+      setAddingWater(false); 
+    }
   };
 
+  // Handle save goals - FIXED
   const handleSaveGoals = async (cal, water) => {
     try {
-      const res = await api.patch(`/user/${user._id}/goals`, { calorieGoal: cal, waterGoal: water });
+      await api.patch(`/user/${user._id}/goals`, { calorieGoal: cal, waterGoal: water });
       setCalorieGoal(cal);
       setWaterGoal(water);
       updateUser({ ...user, calorieGoal: cal, waterGoal: water });
       setShowGoals(false);
       toast.success('Goals updated! 🎯');
-    } catch {
+    } catch (err) {
+      console.error('Save goals error:', err);
       toast.error('Failed to save goals');
     }
   };
@@ -336,8 +381,8 @@ export default function DashboardPage() {
   const waterPct    = Math.min((data.totalWater    / waterGoal)   * 100, 100);
 
   const chartData = data.diets.map((d) => ({
-    name: d.food_name.length > 10 ? d.food_name.slice(0, 10) + '…' : d.food_name,
-    calories: d.calories,
+    name: d.food_name?.length > 10 ? d.food_name.slice(0, 10) + '…' : (d.food_name || 'Unknown'),
+    calories: d.calories || 0,
   }));
 
   const inputClass = "bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all w-full";
@@ -354,7 +399,7 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-bold text-white">
               Good {greet},{' '}
               <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                {user?.name?.split(' ')[0]}
+                {user?.name?.split(' ')[0] || 'User'}
               </span>{' '}👋
             </h1>
             <p className="text-slate-400 text-sm mt-1">
@@ -474,13 +519,30 @@ export default function DashboardPage() {
                   <UtensilsCrossed size={18} className="text-indigo-400" /> Log Food
                 </h3>
                 <form onSubmit={handleAddFood} className="space-y-3">
-                  <input list="dash-food-suggestions" value={foodForm.food_name} onChange={(e) => setFoodForm({ ...foodForm, food_name: e.target.value })} placeholder="Food name" className={inputClass} />
+                  <input 
+                    list="dash-food-suggestions" 
+                    value={foodForm.food_name} 
+                    onChange={(e) => setFoodForm({ ...foodForm, food_name: e.target.value })} 
+                    placeholder="Food name (e.g., rice, chicken, apple)" 
+                    className={inputClass}
+                    autoComplete="off"
+                  />
                   <datalist id="dash-food-suggestions">
                     {Object.keys(FOOD_CALORIES_PER_100G).map((f) => <option key={f} value={f} />)}
                   </datalist>
                   <div className="grid grid-cols-2 gap-3">
-                    <input type="number" value={foodForm.amount_grams} onChange={(e) => setFoodForm({ ...foodForm, amount_grams: e.target.value })} placeholder="Amount (grams)" className={inputClass} />
-                    <select value={foodForm.meal_type} onChange={(e) => setFoodForm({ ...foodForm, meal_type: e.target.value })} className={inputClass + ' cursor-pointer'}>
+                    <input 
+                      type="number" 
+                      value={foodForm.amount_grams} 
+                      onChange={(e) => setFoodForm({ ...foodForm, amount_grams: e.target.value })} 
+                      placeholder="Amount (grams)" 
+                      className={inputClass} 
+                    />
+                    <select 
+                      value={foodForm.meal_type} 
+                      onChange={(e) => setFoodForm({ ...foodForm, meal_type: e.target.value })} 
+                      className={inputClass + ' cursor-pointer'}
+                    >
                       {mealTypes.map((m) => <option key={m}>{m}</option>)}
                     </select>
                   </div>
@@ -495,7 +557,11 @@ export default function DashboardPage() {
                       </p>
                     )}
                   </div>
-                  <button disabled={addingFood} type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60">
+                  <button 
+                    disabled={addingFood} 
+                    type="submit" 
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+                  >
                     {addingFood ? <Loader2 size={16} className="animate-spin" /> : <><Plus size={16} /> Add Food</>}
                   </button>
                 </form>
@@ -507,16 +573,30 @@ export default function DashboardPage() {
                   <Droplets size={18} className="text-blue-400" /> Log Water
                 </h3>
                 <form onSubmit={handleAddWater} className="space-y-3">
-                  <input type="number" value={waterForm.amount} onChange={(e) => setWaterForm({ amount: e.target.value })} placeholder="Amount in ml (e.g. 250)" className={inputClass} />
+                  <input 
+                    type="number" 
+                    value={waterForm.amount} 
+                    onChange={(e) => setWaterForm({ amount: e.target.value })} 
+                    placeholder="Amount in ml (e.g., 250)" 
+                    className={inputClass} 
+                  />
                   <div className="grid grid-cols-3 gap-2">
                     {[150, 250, 500].map((ml) => (
-                      <button key={ml} type="button" onClick={() => setWaterForm({ amount: String(ml) })}
-                        className="bg-slate-700 hover:bg-blue-600/30 border border-slate-600 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 rounded-xl py-2 text-sm transition-all">
+                      <button 
+                        key={ml} 
+                        type="button" 
+                        onClick={() => setWaterForm({ amount: String(ml) })}
+                        className="bg-slate-700 hover:bg-blue-600/30 border border-slate-600 hover:border-blue-500/50 text-slate-300 hover:text-blue-300 rounded-xl py-2 text-sm transition-all"
+                      >
                         {ml} ml
                       </button>
                     ))}
                   </div>
-                  <button disabled={addingWater} type="submit" className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60">
+                  <button 
+                    disabled={addingWater} 
+                    type="submit" 
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-60"
+                  >
                     {addingWater ? <Loader2 size={16} className="animate-spin" /> : <><Plus size={16} /> Add Water</>}
                   </button>
                 </form>

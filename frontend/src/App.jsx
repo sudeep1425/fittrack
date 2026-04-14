@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { useAuth } from './context/useAuth';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
@@ -20,26 +20,62 @@ function RootRedirect() {
   return <Navigate to={user ? '/dashboard' : '/login'} replace />;
 }
 
-export default function App() {
+export default function App({ darkMode }) {
   const { user } = useAuth();
 
   return (
     <BrowserRouter>
       {user && <Navbar />}
-      <Routes>
-        <Route path="/" element={<RootRedirect />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/daily-log" element={<ProtectedRoute><DailyLogPage /></ProtectedRoute>} />
-        <Route path="/activity" element={<ProtectedRoute><ActivityStatsPage /></ProtectedRoute>} />
-        <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-        <Route path="/bmi" element={<ProtectedRoute><BMIPage /></ProtectedRoute>} />
-        <Route path="/zen-mode" element={<ProtectedRoute><ZenModePage /></ProtectedRoute>} />
-        <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <div className={`min-h-screen ${darkMode ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Routes>
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/daily-log" element={
+              <ProtectedRoute>
+                <DailyLogPage darkMode={darkMode} />
+              </ProtectedRoute>
+            } />
+            <Route path="/activity" element={
+              <ProtectedRoute>
+                <ActivityStatsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/reports" element={
+              <ProtectedRoute>
+                <ReportsPage darkMode={darkMode} />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <ProfilePage darkMode={darkMode} />
+              </ProtectedRoute>
+            } />
+            <Route path="/bmi" element={
+              <ProtectedRoute>
+                <BMIPage darkMode={darkMode} />
+              </ProtectedRoute>
+            } />
+            <Route path="/zen-mode" element={
+              <ProtectedRoute>
+                <ZenModePage darkMode={darkMode} />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={
+              <AdminRoute>
+                <AdminPage darkMode={darkMode} />
+              </AdminRoute>
+            } />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </div>
+      </div>
     </BrowserRouter>
   );
 }

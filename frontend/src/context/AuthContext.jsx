@@ -1,7 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-
-const AuthContext = createContext(null);
+import { useState, useEffect } from 'react';
+import { AuthContext } from './useAuth';
 
 const normalizeUser = (rawUser) => {
   if (!rawUser) return null;
@@ -14,14 +12,19 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    if (storedToken && storedUser) {
-      const parsedUser = normalizeUser(JSON.parse(storedUser));
-      setToken(storedToken);
-      setUser(parsedUser);
+    try {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      if (storedToken && storedUser) {
+        const parsedUser = normalizeUser(JSON.parse(storedUser));
+        setToken(storedToken);
+        setUser(parsedUser);
+      }
+    } catch (e) {
+      console.error('Failed to parse user:', e);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = (newToken, newUser) => {
@@ -37,6 +40,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
   };
 
   const updateUser = (updatedUser) => {
@@ -50,10 +55,4 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
-  return ctx;
 };

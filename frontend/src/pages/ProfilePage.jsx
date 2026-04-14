@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { User, Save, Loader2 } from 'lucide-react';
@@ -26,14 +26,15 @@ export default function ProfilePage() {
           height: res.data.height || '',
           weight: res.data.weight || '',
         });
-      } catch {
+      } catch (err) {
+        console.error('Fetch profile error:', err);
         toast.error('Failed to load profile');
       } finally {
         setLoading(false);
       }
     };
     fetch();
-  }, []);
+  }, [user._id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -86,27 +87,17 @@ export default function ProfilePage() {
             <h2 className="text-white text-xl font-bold truncate">{profile?.name}</h2>
             <p className="text-slate-400 text-sm">{profile?.email}</p>
             <span className="inline-block mt-2 px-3 py-1 bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 rounded-full text-xs font-medium capitalize">
-              {profile?.role}
+              {profile?.role || 'User'}
             </span>
           </div>
           
-          <div className="flex items-center gap-6 divide-x divide-indigo-500/30 mt-4 sm:mt-0">
+          {bmi && (
             <div className="text-center px-4">
-              <p className="text-3xl font-bold text-purple-400">{profile?.totalActiveDays || 0}</p>
-              <p className="text-xs font-medium text-purple-300">Active Days</p>
-              <p className="text-slate-500 text-[10px] mt-1">
-                {profile?.lastActiveDate ? `Last: ${profile.lastActiveDate}` : 'No activity'}
-              </p>
+              <p className={`text-3xl font-bold ${bmiColor}`}>{bmi}</p>
+              <p className={`text-xs font-medium ${bmiColor}`}>{bmiLabel}</p>
+              <p className="text-slate-500 text-xs mt-1">BMI</p>
             </div>
-            
-            {bmi && (
-              <div className="text-center pl-6 pr-2">
-                <p className={`text-3xl font-bold ${bmiColor}`}>{bmi}</p>
-                <p className={`text-xs font-medium ${bmiColor}`}>{bmiLabel}</p>
-                <p className="text-slate-500 text-xs mt-1">BMI</p>
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Edit Form */}

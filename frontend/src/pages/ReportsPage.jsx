@@ -71,10 +71,10 @@ export default function ReportsPage() {
           <>
             {/* Stat Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              {statCards.map(({ label, value, icon: Icon, color, bg }) => (
+              {statCards.map(({ label, value, icon, color, bg }) => (
                 <div key={label} className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4">
                   <div className={`w-9 h-9 ${bg} rounded-xl flex items-center justify-center mb-3`}>
-                    <Icon size={18} className={color} />
+                    {icon && icon({ size: 18, className: color })}
                   </div>
                   <p className={`text-xl font-bold ${color}`}>{value}</p>
                   <p className="text-slate-400 text-xs mt-0.5">{label}</p>

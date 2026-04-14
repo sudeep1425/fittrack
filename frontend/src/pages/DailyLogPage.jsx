@@ -74,17 +74,18 @@ export default function DailyLogPage() {
   };
 
   const handleDelete = async (id) => {
-    setDeletingId(id);
-    try {
-      await api.delete(`/diet/${id}`);
-      toast.success('Entry deleted');
-      fetchLog(date);
-    } catch {
-      toast.error('Failed to delete');
-    } finally {
-      setDeletingId(null);
-    }
-  };
+  setDeletingId(id);
+  try {
+    await api.delete(`/diet/${id}`);
+    toast.success('Entry deleted');
+    fetchLog(date);
+  } catch (err) {
+    console.error('Delete error:', err);
+    toast.error('Failed to delete');
+  } finally {
+    setDeletingId(null);
+  }
+};
 
   const inputClass = "bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-2.5 text-sm placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all w-full";
   const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];

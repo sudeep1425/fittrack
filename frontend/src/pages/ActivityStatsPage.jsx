@@ -19,7 +19,26 @@ export default function ActivityStatsPage() {
     };
     fetchData();
   }, []);
-
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const res = await api.get('/activity-stats');
+      setData(res.data);
+    } catch (err) {
+      console.error('Activity stats error:', err);
+      // Set mock data while endpoint is being developed
+      setData({
+        currentStreak: 0,
+        totalActiveDays: 0,
+        lastActiveDate: null,
+        records: []
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchData();
+}, []);
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center pt-20">
