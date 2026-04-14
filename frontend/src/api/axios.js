@@ -1,20 +1,16 @@
-import axios from 'axios';
+import axios from "axios";
 
-// Extract and safely parse the base URL
-const rawUrl = import.meta.env.VITE_API_URL;
-let formattedUrl = rawUrl;
-
-// Remove trailing slash if present
-if (formattedUrl.endsWith('/')) formattedUrl = formattedUrl.slice(0, -1);
-// Remove /api so we can standardize it cleanly below
-if (formattedUrl.endsWith('/api')) formattedUrl = formattedUrl.slice(0, -4);
+// Fallback if env is missing
+const baseURL =
+  import.meta.env.VITE_API_URL || "https://fittrack-a0zu.onrender.com";
 
 const api = axios.create({
-  baseURL: `${formattedUrl}/api`,
+  baseURL: `${baseURL}/api`,
 });
 
+// Attach token automatically
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
