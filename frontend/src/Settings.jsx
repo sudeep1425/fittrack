@@ -29,7 +29,7 @@ const Settings = ({ darkMode }) => {
     }
 
     try {
-      const response = await api.put(`/user/${user.id}`, formData);
+      const response = await api.put(`/user/${user._id}`, formData);
       const updatedUser = { ...response.data, token: localStorage.getItem('token') };
       localStorage.setItem("user", JSON.stringify(updatedUser));
       toast.success("Profile updated successfully!");
