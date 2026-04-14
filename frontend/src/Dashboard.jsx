@@ -11,21 +11,15 @@ const Dashboard = () => {
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const user = JSON.parse(localStorage.getItem("user")) || JSON.parse(sessionStorage.getItem("user"));
-  const token = user?.token;
-
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [dietRes, waterRes] = await Promise.all([
-          api.get("/diet"),
+        const [activityRes, waterRes] = await Promise.all([
+          api.get("/activity"),
           api.get("/water")
         ]);
-        const foods = Array.isArray(dietRes.data) ? dietRes.data : [];
-        const waters = Array.isArray(waterRes.data) ? waterRes.data : [];
-        const totalWater = waters.reduce((sum, w) => sum + Number(w.amount || 0), 0);
-        setFoods(foods);
-        setWater(totalWater);
+        setFoods(activityRes.data || []);
+        setWater(Number(waterRes.data?.totalWater) || 0);
       } catch (err) {
         console.error("Dashboard error:", err);
         toast.error("Failed to load dashboard");
@@ -33,10 +27,9 @@ const Dashboard = () => {
         setLoading(false);
       }
     };
-    if (token) {
-      fetchDashboardData();
-    }
-  }, [token]);
+
+    fetchDashboardData();
+  }, []); // Empty dependency array
 
   const addFood = async () => {
     if (!foodName) return;
@@ -51,6 +44,7 @@ const Dashboard = () => {
       setFoods([res.data, ...foods]);
       setFoodName("");
       setCalories(0);
+      toast.success("Food added successfully!");
     } catch {
       toast.error("Failed to add food");
     }
@@ -63,6 +57,7 @@ const Dashboard = () => {
       await api.post("/water", { amount: Number(newWater) });
       setWater(prev => prev + Number(newWater));
       setNewWater("");
+      toast.success("Water added successfully!");
     } catch {
       toast.error("Failed to add water");
     }
@@ -84,10 +79,10 @@ const Dashboard = () => {
       <input value={newWater} onChange={(e) => setNewWater(e.target.value)} />
       <button onClick={addWater}>Add Water</button>
 
-      <h2>Water: {water}</h2>
+      <h2>Water: {water}L</h2>
 
       {foods.map((f, i) => (
-        <div key={i}>{f.food_name} - {f.calories}</div>
+        <div key={i}>{f.food_name} - {f.calories} cal</div>
       ))}
     </div>
   );
