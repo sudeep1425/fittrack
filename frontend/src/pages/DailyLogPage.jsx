@@ -19,8 +19,9 @@ export default function DailyLogPage() {
     try {
       setLoading(true);
       const res = await api.get(`/daily-log?date=${d}`);
-      setLogData(res.data);
-    } catch {
+      setLogData(res.data || { foods: [], totalWater: 0 });
+    } catch (err) {
+      console.error("Error fetching log:", err);
       toast.error('Failed to load log');
     } finally {
       setLoading(false);

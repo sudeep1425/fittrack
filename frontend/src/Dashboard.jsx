@@ -16,29 +16,27 @@ const Dashboard = () => {
 
   useEffect(() => {
     const fetchDashboardData = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const dietRes = await api.get("/diet");
-        setFoods(Array.isArray(dietRes.data) ? dietRes.data : []);
-
-        const waterRes = await api.get("/water");
+        const [dietRes, waterRes] = await Promise.all([
+          api.get("/diet"),
+          api.get("/water")
+        ]);
+        const foods = Array.isArray(dietRes.data) ? dietRes.data : [];
         const waters = Array.isArray(waterRes.data) ? waterRes.data : [];
         const totalWater = waters.reduce((sum, w) => sum + Number(w.amount || 0), 0);
+        setFoods(foods);
         setWater(totalWater);
       } catch (err) {
-        console.error(err);
-        toast.error("Failed to load dashboard data");
+        console.error("Dashboard error:", err);
+        toast.error("Failed to load dashboard");
       } finally {
         setLoading(false);
       }
     };
-
-    fetchDashboardData();
-  }, [token, user]);
+    if (token) {
+      fetchDashboardData();
+    }
+  }, [token]);
 
   const addFood = async () => {
     if (!foodName) return;

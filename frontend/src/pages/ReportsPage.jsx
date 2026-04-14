@@ -29,8 +29,10 @@ export default function ReportsPage() {
     const fetch = async () => {
       try {
         const res = await api.get('/reports');
-        setData(res.data.map((d) => ({ ...d, date: d.date.slice(5) })));
-      } catch {
+        const reportData = Array.isArray(res.data) ? res.data : [];
+        setData(reportData.map((d) => ({ ...d, date: d.date.slice(5) })));
+      } catch (err) {
+        console.error('Reports error:', err);
         toast.error('Failed to load reports');
       } finally {
         setLoading(false);

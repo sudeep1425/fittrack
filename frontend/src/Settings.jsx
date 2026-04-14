@@ -21,9 +21,9 @@ const Settings = ({ darkMode }) => {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const user = JSON.parse(localStorage.getItem("user") || sessionStorage.getItem("user"));
+    const user = JSON.parse(localStorage.getItem("user")) || JSON.parse(sessionStorage.getItem("user"));
 
-    if (!user?.id) {
+    if (!user?._id) {
       toast.error("User session not found");
       return;
     }
