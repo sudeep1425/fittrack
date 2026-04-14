@@ -37,7 +37,26 @@ app.get('/', (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ message: 'Backend is LIVE 🚀' });
 });
+const mongoose = require("mongoose");
 
+app.get("/api/db-check", async (req, res) => {
+  try {
+    const state = mongoose.connection.readyState;
+
+    const statusMap = {
+      0: "Disconnected ❌",
+      1: "Connected ✅",
+      2: "Connecting ⏳",
+      3: "Disconnecting ⚠️",
+    };
+
+    res.json({
+      dbState: statusMap[state],
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // ─────────────────────────────────────────
 // ✅ CONNECT DB
 // ─────────────────────────────────────────
